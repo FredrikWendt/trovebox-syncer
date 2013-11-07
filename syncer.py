@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 
 #
+# Syncs all images from a Trovebox account.
+# Setup needed:
+# * install Trovebox' Python lib
+# * configure ~/.config/trovebox/default
+# * modify paths in __init__ below (or improve script :-)
+#
+
+#
 # Downloads all images, stored with their hash in ''storageDir''.
 # A symlink is created in the "by date" folder, ''dateDir''.
 # For each tag, a directory with that name is created in ''tagsDir'', with a symlink to the actual file.
@@ -8,6 +16,7 @@
 #
 
 from trovebox import Trovebox
+import os, re
 
 class Syncer():
 	def __init__(self):
@@ -18,14 +27,21 @@ class Syncer():
 		self._albumsDir = '/home/ceda/trovebox/albums'
 
 	def sync(self):
-		page = 0
+		# page is 1 based in the API
+		page = 1
 		while True:
+			print "Syncing photos %s to %s (page %s)" % (100*page-100, 100*page, page)
 			photos = self.client.photos.list(pageSize=100, page=page)
 			if len(photos) > 0:
 				for photo in photos:
 					self._process(photo)
+				page = page + 1
+			else:
+				print "All photos synced"
+				return
 
 	def _process(self, photo):
+		print "Processing %s" % photo.filenameOriginal
 		self._makeSureWeHaveTheRawImage(photo)
 		self._makeSureWeHaveTheDateLinked(photo)
 		self._makeSureWeHaveTheTagsLinked(photo)
@@ -34,32 +50,39 @@ class Syncer():
 	def _makeSureWeHaveTheDateLinked(self, photo):
 		source = self._getRawPathTo(photo)
 		path = self._getDatePathTo(photo)
-		self._makeSureWeHaveASympathFromTo(path, source)
+		self._makeSureWeHaveASymlinkFromTo(path, source)
 
 	def _makeSureWeHaveTheAlbumsLinked(self, photo):
 		source = self._getRawPathTo(photo)
 		paths = self._getAlbumPathsTo(photo)
 		for path in paths:
-			self._makeSureWeHaveASympathFromTo(path, source)
+			self._makeSureWeHaveASymlinkFromTo(path, source)
 
 	def _makeSureWeHaveTheTagsLinked(self, photo):
 		source = self._getRawPathTo(photo)
 		paths = self._getTagPathsTo(photo)
 		for path in paths:
-			self._makeSureWeHaveASympathFromTo(path, source)
+			self._makeSureWeHaveASymlinkFromTo(path, source)
 
 	def _makeSureWeHaveTheRawImage(self, photo):
 		file_name = self._getRawPathTo(photo)
 		if os.path.exists(file_name):
 			return
-		self._downloadUrl(photo.file_nameOriginal, file_name)
+		self._downloadUrl(photo.pathOriginal, file_name)
 
 	def _makeSureWeHaveASymlinkFromTo(self, path, source):
 		if not os.path.exists(path):
 			print "Symlinking source %s to %s" % (source, path)
+			self._makeSureDirectoryExistsForFile(path)
 			os.symlink(source, path)
 
+	def _makeSureDirectoryExistsForFile(self, file_name):
+		directory = os.path.dirname(file_name)
+		if not os.path.isdir(directory):
+			os.makedirs(directory)
+
 	def _downloadUrl(self, url, file_name):
+		self._makeSureDirectoryExistsForFile(file_name)
 		import urllib2
 		u = urllib2.urlopen(url)
 		f = open(file_name, 'wb')
@@ -86,7 +109,7 @@ class Syncer():
 		h = photo.hash
 		h1 = h[0:2]
 		h2 = h[2:4]
-		return os.path.join(self.storageDir, h1, h2, h)
+		return os.path.join(self._storageDir, h1, h2, h)
 
 	def _getDatePathTo(self, photo):
 		return os.path.join(self._dateDir, photo.dateTakenYear, photo.dateTakenMonth, 
@@ -107,7 +130,6 @@ class Syncer():
 			result.append(os.path.join(self._tagsDir, tag, photo.filenameOriginal))
 		return result
 
-		
 
-def sync():
-	client 
+if __name__ == '__main__':
+	Syncer().sync()
