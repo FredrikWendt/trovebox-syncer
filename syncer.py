@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 #
-# Syncs all images from a Trovebox account.
 # Setup needed:
-# * install Trovebox' Python lib
-# * configure ~/.config/trovebox/default
-# * modify paths in __init__ below (or improve script :-)
+# * install Trovebox' Python lib (``pip install trovebox``) 
+# * create OAuth tokens for this application
+# * configure ``~/.config/trovebox/default`` (with OAuth tokens)
+# * modify paths in ``__init__`` below (or improve script :-)
 #
 
 #
