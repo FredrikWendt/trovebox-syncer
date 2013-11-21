@@ -25,20 +25,31 @@ class Syncer():
 		self._dateDir = '/home/ceda/trovebox/date'
 		self._tagsDir = '/home/ceda/trovebox/tags'
 		self._albumsDir = '/home/ceda/trovebox/albums'
+		self._tags_to_ignore = 'autoupload,January,February,March,April,May,June,July,August,September,October,November,December'.split(',')
 
-	def sync(self):
+
+	def sync(self, max_count = 10000):
+		images = self._sync(max_count)
+
+
+	def _sync(self, max_count):
 		# page is 1 based in the API
 		page = 1
+		photo_count = 0
 		while True:
 			print "Syncing photos %s to %s (page %s)" % (100*page-100, 100*page, page)
 			photos = self.client.photos.list(pageSize=100, page=page)
 			if len(photos) > 0:
 				for photo in photos:
 					self._process(photo)
+					photo_count += 1
+					if photo_count >= max_count:
+						print "All photos synced"
+						return photo_count
 				page = page + 1
 			else:
 				print "All photos synced"
-				return
+				return photo_count
 
 	def _process(self, photo):
 		print "Processing %s" % photo.filenameOriginal
@@ -125,11 +136,25 @@ class Syncer():
 		result = []
 		for tag in photo.tags:
 			# ignore "2013" tag
-			if re.match("^\d+$", tag):
+			if self._ignoreTag(photo, tag):
 				continue
 			result.append(os.path.join(self._tagsDir, tag, photo.filenameOriginal))
 		return result
 
+	def _ignoreTag(self, photo, tag):
+		if "autoupload" == tag:
+			return True
+		if re.match("^\d+$", tag):
+			return True
+		if tag in self._tags_to_ignore:
+			return True
+
+		return False
+
 
 if __name__ == '__main__':
-	Syncer().sync()
+	import sys
+	if len(sys.argv) > 1:
+		Syncer().sync(int(sys.argv[1]))
+	else:
+		Syncer().sync()
