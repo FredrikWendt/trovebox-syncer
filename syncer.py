@@ -19,12 +19,12 @@ from trovebox import Trovebox
 import os, re
 
 class Syncer():
-	def __init__(self):
+	def __init__(self, root = '/home/ceda/trovebox'):
 		self.client = Trovebox()
-		self._storageDir = '/home/ceda/trovebox/raw'
-		self._dateDir = '/home/ceda/trovebox/date'
-		self._tagsDir = '/home/ceda/trovebox/tags'
-		self._albumsDir = '/home/ceda/trovebox/albums'
+		self._storageDir = os.path.join(root, 'raw')
+		self._dateDir = os.path.join(root, 'date')
+		self._tagsDir = os.path.join(root, 'tags')
+		self._albumsDir = os.path.join(root, 'albums')
 		self._tags_to_ignore = 'autoupload,January,February,March,April,May,June,July,August,September,October,November,December'.split(',')
 
 
@@ -123,8 +123,14 @@ class Syncer():
 		return os.path.join(self._storageDir, h1, h2, h)
 
 	def _getDatePathTo(self, photo):
-		return os.path.join(self._dateDir, photo.dateTakenYear, photo.dateTakenMonth, 
-					photo.dateTakenDay, photo.filenameOriginal)
+		def zeroPad(v):
+			if len(v) == 1:
+				return "0%s" % v
+			return v
+
+		return os.path.join(self._dateDir, photo.dateTakenYear, 
+				zeroPad(photo.dateTakenMonth),
+				zeroPad(photo.dateTakenDay), photo.filenameOriginal)
 
 	def _getAlbumPathsTo(self, photo):
 		result = []
@@ -157,4 +163,4 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		Syncer().sync(int(sys.argv[1]))
 	else:
-		Syncer().sync()
+		Syncer().sync(100)
